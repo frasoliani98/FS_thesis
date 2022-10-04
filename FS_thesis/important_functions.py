@@ -128,14 +128,15 @@ def detect_EAD(t, v):
     
     return info, result
 
-def run_EAD(ind): 
+def run_EAD(ind, IC): 
 
     ## EAD CHALLENGE: Istim = -.1
     mod, proto = get_ind_data(ind)
     proto.schedule(5.3, 0.1, 1, 1000, 0) 
     proto.schedule(0.1, 3004, 1000-100, 1000, 1) #EAD amp is about 4mV from this
     sim = myokit.Simulation(mod,proto)
-    sim.pre(100*1000)
+    #sim.pre(100*1000)
+    sim.set_state(IC)
     dat = sim.run(5000)
 
     # Get t, v, and cai for second to last AP#######################

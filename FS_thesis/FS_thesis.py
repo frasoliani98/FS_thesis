@@ -2,16 +2,13 @@
 
 import random
 from math import log10
-#import matplotlib.pyplot as plt
 from scipy.signal import find_peaks 
-#import seaborn as sns
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from deap import base, creator, tools 
-#from supercell_ga import Ga_Config, plot_generation
 import myokit
-from important_functions import detect_EAD, run_EAD, get_last_ap
+from important_functions import detect_EAD, run_EAD
 import matplotlib.pyplot as plt
 
 # %%
@@ -44,37 +41,6 @@ class Ga_Config():
         self.cost = cost
         self.feature_targets = feature_targets
 
-def start_ga(pop_size=10, max_generations=20):
-    feature_targets = {'dvdt_max': [80, 86, 92],
-                       'apd10': [5, 15, 30],
-                       'apd50': [200, 220, 250],
-                       'apd90': [250, 270, 300],
-                       'cat_amp': [2.8E-4, 3.12E-4, 4E-4],
-                       'cat10': [80, 100, 120],
-                       'cat50': [200, 220, 240],
-                       'cat90': [450, 470, 490]}
-
-    # 1. Initializing GA hyperparameters
-    global GA_CONFIG
-    GA_CONFIG = Ga_Config(population_size=pop_size,
-                          max_generations=max_generations,
-                          params_lower_bound=0.1,
-                          params_upper_bound=2,
-                          tunable_parameters=['i_cal_pca_multiplier',
-                                              'i_kr_multiplier'],
-                          #tunable_parameters=['i_cal_pca_multiplier',
-                                              #'i_ks_multiplier',
-                                              #'i_kr_multiplier'],
-                                              #'i_nal_multiplier',
-                                              #'jup_multiplier'],
-                          mate_probability=0.9,
-                          mutate_probability=0.9,
-                          gene_swap_probability=0.2,
-                          gene_mutation_probability=0.2,
-                          tournament_size=2,
-                          cost='function_1',
-                          feature_targets=feature_targets)
-
 def _initialize_individual():
     # Builds a list of parameters using random upper and lower bounds.
     lower_exp = log10(GA_CONFIG.params_lower_bound)
@@ -86,18 +52,34 @@ def _initialize_individual():
     keys = [val for val in GA_CONFIG.tunable_parameters]
     return dict(zip(keys, initial_params))
 
+def get_ind_data(ind):
+    #import os 
+    #dir_path = os.path.dirname(os.path.realpath(__file__))
+    #mod, proto, x = myokit.load(r'C:\Users\user\Desktop\Thesis\GeneticAlgorithms\tor-ord-GA\tor_ord_endo.mmt')
+
+    mod, proto, x = myokit.load('./tor_ord_endo2.mmt')
+    if ind is not None:
+        for k, v in ind[0].items():
+            mod['multipliers'][k].set_rhs(v)
+
+    return mod, proto
+
 def _evaluate_fitness(ind):
-    feature_error = get_feature_errors(ind)
+    mod, proto = get_ind_data(ind)
+    proto.schedule(5.3, 0.1, 1, 1000, 0) 
+    sim = myokit.Simulation(mod,proto)
+    sim.pre(1000 * 100) #pre-pace for 100 beats
+    IC = sim.state()
+
+    feature_error = get_feature_errors(ind, IC=IC)  #Run get feature errors with prepaced simulation object
 
     # Returns 
     if feature_error == 500000:
         return feature_error
 
-    #ead_fitness = get_ead_error(ind)
-
 
     #ind = {'i_cal_pca_multiplier': 1, 'i_kr_multiplier': 1}
-    t, v = run_EAD(ind)
+    t, v = run_EAD(ind, IC=IC)
     info, result = detect_EAD(t, v)
     #print(info)
     
@@ -108,9 +90,9 @@ def _evaluate_fitness(ind):
     fitness = feature_error + ead_error
 
 
-    return fitness 
+    return fitness
 
-def get_feature_errors(ind):
+def get_feature_errors(ind, IC):
     """
     Compares the simulation data for an individual to the baseline Tor-ORd values. 
     The returned error value is a sum of the differences between the individual and baseline values.
@@ -121,7 +103,7 @@ def get_feature_errors(ind):
     """
 
     ap_features = {}
-    t, v, cai, i_ion = get_normal_sim_dat(ind)
+    t, v, cai, i_ion = get_normal_sim_dat(ind, IC)
 
     # Returns really large error value if cell AP is not valid 
     if ((min(v) > -60) or (max(v) < 0)):
@@ -169,7 +151,7 @@ def get_feature_errors(ind):
 
     return error
 
-def get_normal_sim_dat(ind):
+def get_normal_sim_dat(ind, IC):
     """
         Runs simulation for a given individual. If the individuals is None,
         then it will run the baseline model
@@ -178,20 +160,17 @@ def get_normal_sim_dat(ind):
         ------
             t, v, cai, i_ion
     """
-    #import os 
-    #dir_path = os.path.dirname(os.path.realpath(__file__))
-
-    #mod, proto, x = myokit.load(r'C:\Users\user\Desktop\Thesis\GeneticAlgorithms\tor-ord-GA\tor_ord_endo.mmt')
-    mod, proto, x = myokit.load('./tor_ord_endo2.mmt')
-    #mod, proto, x = myokit.load('./tor_ord_endo.mmt')
-    if ind is not None:
-        for k, v in ind[0].items():
-            mod['multipliers'][k].set_rhs(v)
-
-    cl = 1000
-    proto.schedule(5.3, 0.1, 1, cl, 0) 
+    mod, proto = get_ind_data(ind)
+    proto.schedule(5.3, 0.1, 1, 1000, 0) 
     sim = myokit.Simulation(mod, proto)
-    dat = sim.run(50000) # set time in ms
+    
+    # in order to resolve the error on the plot_generations
+    # where IC wasnt declared
+    if IC == None:
+        IC = sim.state()
+
+    sim.set_state(IC)
+    dat = sim.run(5000) # set time in ms
 
     # Get t, v, and cai for second to last AP#######################
     i_stim = dat['stimulus.i_stim']
@@ -253,7 +232,7 @@ def _mutate(individual):
 
             individual[0][key] = new_param
 
-def start_ga(pop_size=10, max_generations=20):
+def start_ga(pop_size, max_generations):
     feature_targets = {'dvdt_max': [80, 86, 92],
                        'apd10': [5, 15, 30],
                        'apd50': [200, 220, 250],
@@ -340,23 +319,19 @@ def run_ga(toolbox):
         ind.fitness.values = (fit,)
         
     # Note: visualize individual fitnesses with: population[0].fitness
-    gen_fitnesses = [ind.fitness.values[0] for ind in population]
 
-    print(f'\tAvg fitness is: {np.mean(gen_fitnesses)}')
-    print(f'\tBest fitness is {np.min(gen_fitnesses)}')
 
     # Store initial population details for result processing.
     final_population = [population]
-    data = list()
-    for generation in range(1, GA_CONFIG.max_generations):
+    avg_err = list()
+    best_err = list()
+    
+    for generation in range(0, GA_CONFIG.max_generations):
         print('Generation {}'.format(generation))
-        # Offspring are chosen through tournament selection. They are then
-        # cloned, because they will be modified in-place later on.
-
+        #print("Generation number is: " +str(generation))
         # 5. DEAP selects the individuals 
         selected_offspring = toolbox.select(population, len(population))
-        # COMMENT HERE
-        print(selected_offspring)
+        #print(selected_offspring)
 
         offspring = [toolbox.clone(i) for i in selected_offspring]
         print(offspring)
@@ -385,33 +360,101 @@ def run_ga(toolbox):
 
         population = offspring
         gen_fitnesses = [ind.fitness.values[0] for ind in population]
-        print("Fitness values are: " + str(gen_fitnesses))
+        #print("Fitness values are: " + str(gen_fitdata))
         tempdata = [i[0] for i in population]
-        data.extend(tempdata)
-        
-        df = pd.DataFrame(data)
-        df.to_excel('FS_data.xlsx', 
-                    sheet_name='Sheet1')
-                    #float_format="%.2f")
 
-        # ADD HERE CODE TO SAVE
+        """ for tempdic, temperror in zip(tempdata, gen_fitdata):
+            tempdic["error"] = temperror """
+
+        df_data = pd.DataFrame(tempdata)
+        df_error = pd.DataFrame(gen_fitnesses, columns=["error"])
+        df1 = df_data.join(df_error, how="outer")
+        
+        if generation == 0:
+            df = df1
+        
+        if generation > 0:
+            df = pd.concat([df, df1])
+        
 
         print(f'\tAvg fitness is: {np.mean(gen_fitnesses)}')
         print(f'\tBest fitness is {np.min(gen_fitnesses)}')
 
+
+        avg_error = np.mean(gen_fitnesses)
+        avg_err.append(avg_error)
+        best_error = np.min(gen_fitnesses)
+        best_err.append(best_error)
+
+        
+
         final_population.append(population)
 
+    print("avg_error: " +str(avg_err))
+    print("best_err: " +str(best_err))
+
+    # Average and Best errors to excel
+    df_avg_err = pd.DataFrame(avg_err, columns=["Avg Error"])
+    df_best_err = pd.DataFrame(best_err, columns=["Best Error"])
+    dfe = df_avg_err.join(df_best_err, how="outer")
+    dfe.to_excel('FS_errors.xlsx', sheet_name='Sheet1')
+
+    #Conductances with error to excel
+    df.to_excel('FS_data.xlsx', sheet_name='Sheet1')
+
     return final_population
+
+
+# Apply IKr Block
+#1. i need to take the individuals from the last generation
+def ikr_block(best_ind, IC):
+    # and then i have to rerun the code ?
+    mod, proto = get_ind_data(best_ind)
+    mod['multipliers']['i_cal_pca_multiplier'].set_rhs(8)
+    mod['multipliers']['i_kr_multiplier'].set_rhs(0.5)
+    proto.schedule(5.3, 0.1, 1, 1000, 0) 
+    sim = myokit.Simulation(mod, proto)
+    
+    '''
+    # Do we need IC?
+    if IC == None:
+        IC = sim.state()
+    
+    sim.pre(1000 * 100)
+    sim.set_state(IC)
+    '''
+
+    dat = sim.run(20000)
+
+    fig, axs = plt.subplots(2, 1, figsize=(12, 6))
+    axs[0].plot(dat['engine.time'], dat['membrane.v'])
+    axs[1].plot(dat['engine.time'], dat['membrane.i_ion'])
+
+    for ax in axs:
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+
+    axs[1].set_xlabel('Time (ms)', fontsize=14)
+    axs[0].set_ylabel('Voltage (mV)', fontsize=14)
+    axs[1].set_ylabel('Current (pA/pF)', fontsize=14)
+
+    axs[1].set_ylim(-1, 4)
+    plt.show()
 
 def plot_generation(inds,
                     gen=None,
                     is_top_ten=True,
                     lower_bound=.1,
                     upper_bound=2):
+    
+    #print("Individuals: " +str(inds))
+    
     if gen is None:
         gen = len(inds) - 1
 
     pop = inds[gen]
+
+    print("Populations: " +str(pop))
 
     pop.sort(key=lambda x: x.fitness.values[0])
     best_ind = pop[0]
@@ -434,6 +477,10 @@ def plot_generation(inds,
     # all_ind_dict: contains currents and then values of them
     # and do it for every ind in population
 
+    # APPLY THE BLOCK TO THE BEST INDIVIDUALS
+    #  OF THE LAST GENERATION
+    ikr_block(best_ind, IC=None)
+
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
     for ax in axs:
@@ -442,14 +489,10 @@ def plot_generation(inds,
 
     curr_x = 0
 
-    # conds contains the values of the currents 
-    # not conductances
-
     for k, conds in all_ind_dict.items():
         for i, g in enumerate(conds):
             # g = log10(g)
             x = curr_x + np.random.normal(0, .01)
-            # to avoid them to overlap
             g_val = 1 - fitnesses[i] / max(fitnesses)
             axs[0].scatter(x, g, color=(0, g_val, 0))
             #if i < 10:
@@ -463,6 +506,7 @@ def plot_generation(inds,
 
     curr_x = 0
 
+
     axs[0].hlines(0, -.5, (len(keys)-.5), colors='grey', linestyle='--')
     axs[0].set_xticks([i for i in range(0, len(keys))])
     #axs[0].set_xticklabels(['GCaL', 'GKs', 'GKr', 'GNaL', 'Jup'], fontsize=10)
@@ -474,10 +518,10 @@ def plot_generation(inds,
     axs[0].set_ylabel('Conductances', fontsize=14)                                
     #axs[0].set_ylabel('Log10 Conductance', fontsize=14)
 
-    t, v, cai, i_ion = get_normal_sim_dat(best_ind)
+    t, v, cai, i_ion = get_normal_sim_dat(best_ind, IC=None)
     axs[1].plot(t, v, 'b--', label='Best Fit')
 
-    t, v, cai, i_ion = get_normal_sim_dat(None)
+    t, v, cai, i_ion = get_normal_sim_dat(None, IC=None)
     axs[1].plot(t, v, 'k', label='Original Tor-ORd')
 
     axs[1].set_ylabel('Voltage (mV)', fontsize=14)
@@ -485,20 +529,68 @@ def plot_generation(inds,
 
     axs[1].legend()
 
-    fig.suptitle(f'Generation {gen+1}', fontsize=14)
+    fig.suptitle(f'Generation {gen}', fontsize=14)
 
+    # Plot of avg and mean errors (load data from excel)
+    num_gen = np.array(range(1, (GA_CONFIG.max_generations)+1))
+
+    avg_best_errs = pd.read_excel('FS_errors.xlsx')
+    avg_err_plot = pd.DataFrame(avg_best_errs, columns= ['Avg Error'])
+    best_err_plot = pd.DataFrame(avg_best_errs, columns= ['Best Error'])
+    #print(avg_best_errs)
+    
+
+    plt.figure(figsize=(12, 6))
+
+    '''
+    x = list()
+    curr_x = 1
+
+    for i in avg_err_plot:
+        x = curr_x + np.random.normal(0, .01)
+        curr_x += 1
+        plt.scatter(x, i, color='r')
+        #plt.scatter(curr_x, j, color='b')
+    
+    print("Var x: " +str(x))
+    '''
+
+    plt.plot(num_gen, avg_err_plot, "bo", label="Average Error")
+    plt.plot(num_gen, avg_err_plot)
+    plt.plot(num_gen, best_err_plot, "ro", label="Best Error")
+    plt.plot(num_gen, best_err_plot)
+    #plt.spines['right'].set_visible(False)
+    #plt.spines['top'].set_visible(False)
+    plt.legend()
+
+    plt.xlabel('Number of Generations', fontsize=14)
+    plt.ylabel('Errors', fontsize=14)
+    plt.xlim(0,(GA_CONFIG.max_generations)+0.5)
+    #plt.ylim(min(best_err_plot), max(avg_err_plot))
+    plt.title('Average and Best error')
+
+    
     plt.show()
-
+    
+    
+# %% Plot
 def main():
-    all_individuals = start_ga(pop_size=10, max_generations=20)
+    all_individuals = start_ga(pop_size=5, max_generations=8)
 
     plot_generation(all_individuals,
                     gen=None,
                     is_top_ten=False,
                     lower_bound=GA_CONFIG.params_lower_bound,
                     upper_bound=GA_CONFIG.params_upper_bound)
+    
+    # these value have to be the return of plot generation
+
 if __name__ == '__main__':
     main()
 
 
 # %%
+
+
+
+    
