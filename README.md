@@ -4,7 +4,9 @@
 
 "FS_errors": excel file that will fill with the errors
 
-"FS_thesis3": main code
+"FS_thesis3": OLD main code
+
+"FS_thesis4": NEW main code with the new feature targets and new get error
 
 "important functions": functions used for the EADs
 
