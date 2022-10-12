@@ -2,7 +2,9 @@
 
 "FS_data": excel file that will fill with the values of the conductances
 
-"FS_thesis": main code
+"FS_errors": excel file that will fill with the errors
+
+"FS_thesis3": main code
 
 "important functions": functions used for the EADs
 
