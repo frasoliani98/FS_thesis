@@ -10,4 +10,4 @@
 
 "tor_ord_endo" and "tor_ord_enndo2": models
 
-"supercell_ga": just to try with the idael cases or tests
+"supercell_ga": just to try with the ideal cases or tests
