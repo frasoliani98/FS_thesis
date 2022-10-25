@@ -1,4 +1,4 @@
-# FS_thesis
+# FS_thesis: valid for every version
 
 "FS_data": excel file that will fill with the values of the conductances
 
