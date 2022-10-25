@@ -4,12 +4,46 @@
 
 "FS_errors": excel file that will fill with the errors
 
-"FS_thesis3": OLD main code
+"EADs": excel file that will fill with the EADs
 
-"FS_thesis4": NEW main code with the new feature targets and new get error
-
-"important functions": functions used for the EADs
+"important functions": functions used for the EADs (run_EAD and detect_EAD#
 
 "tor_ord_endo" and "tor_ord_enndo2": models
 
 "supercell_ga": just to try with the ideal cases or tests
+
+"FS_thesis3": code with just:
+# 1) preprocessing and proto schedule 
+# 2) old feature targets: {'dvdt_max': [80, 86, 92],
+                          'apd10': [5, 15, 30],
+                          'apd50': [200, 220, 250],
+                          'apd90': [250, 270, 300],
+                          'cat_amp': [2.8E-4, 3.12E-4, 4E-4],
+                          'cat10': [80, 100, 120],
+                          'cat50': [200, 220, 240],
+                          'cat90': [450, 470, 490]}
+
+"FS_thesis4": code with:
+# 1) just 2 tunable parameters (Ikr and ICaL) instead of 5 tunable parameters
+# 2) error goes to 0
+# 3) the new feature targets: {'Vm_peak': [10, 33, 55],
+                               'dvdt_max': [100, 347, 1000],
+                               'apd40': [85, 198, 320],
+                               'apd50': [110, 220, 430],
+                               'apd90': [180, 271, 440],
+                               'triangulation': [50, 73, 150],
+                               'RMP': [-95, -88, -80],
+                               'cat_amp': [3E-4*1e5, 3.12E-4*1e5, 8E-4*1e5],
+                               'cat_peak': [40, 58, 60],
+                               'cat90': [350, 467, 500]}
+
+
+"FS_thesis4_2": code with
+# 1) little error 1e-5 (inside "get_feature_error" line " ap_features['cat_amp'] = cat_amp*1e-5" )
+# 2) computation of EADs whith run_EAD and detect_EAD
+
+"FS_thesis5": Kristin code to save EADs:
+# 1) use "concat" instead of "append"
+# 2) adjustments on return 500000 condition 
+# 3) excel file EADs
+
