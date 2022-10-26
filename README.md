@@ -2,7 +2,9 @@
 1) FS_3: results from 1st version of the code
 2) FS_4: results from 2nd version of the code
 3) FS_5: results from 3rd version of the code:
+
       a) COST1: using of cost function_1 (mean squared differences) -> every time use EAD=100000 in order to be sure to give importance to EADs and to be                   able to get rid of them during the generations
+      
       b) COST2: using of cost function_2 (check the boundaries) -> inside cost2 sometimes i used EAD=1000 and other times i used EAD=100000
 
 # FS_thesis: valid for every version
