@@ -6,6 +6,8 @@
       a) COST1: using of cost function_1 (mean squared differences) -> every time use EAD=100000 in order to be sure to give importance to EADs and to be                   able to get rid of them during the generations
       
       b) COST2: using of cost function_2 (check the boundaries) -> inside cost2 sometimes i used EAD=1000 and other times i used EAD=100000
+      
+      c) name of the files: 1st number indicate number of individuals while the second one indicate the number of generations used
 
 # FS_thesis: valid for every version
 
