@@ -1,7 +1,7 @@
 # FS_results
 1) FS_3: results from 1st version of the code
 2) FS_4: results from 2nd version of the code
-3) FS_5: results from 3rd version of the code:
+3) FS_5: results from 3rd version of the code: (3 different challenges: ICaL=8, ICaL+8, ICaL*8 -> but the results are the same between all the tests in these 3 different challenges)
 
       a) COST1: using of cost function_1 (mean squared differences) -> every time use EAD=100000 in order to be sure to give importance to EADs and to be                   able to get rid of them during the generations
       
@@ -58,4 +58,7 @@
 2) adjustments on return 500000 condition 
 3) excel file EADs
 4) Graph EADs vs Generations
+
+# "FS_thesis6": Alex suggestion:
+1) just consider ICaL and IKr as blockers -> changed the interval of lower and upper tunable parameters from 0.1 to 1 instead of 0.1 to 10
 
