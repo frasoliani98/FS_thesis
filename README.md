@@ -62,3 +62,10 @@
 # "FS_thesis6": Alex suggestion:
 1) just consider ICaL and IKr as blockers -> changed the interval of lower and upper tunable parameters from 0.1 to 1 instead of 0.1 to 10
 
+
+# "FS_thesis7": Improvement (mix) of the error function:
+KRISTIN ADDING NEW FUNCTIONS ABOUT THE ERROR COMPUTATION:
+1) def closest
+2) def check_physio_torord
+3) def get_torord_phys_data
+4) Modify computation of fitness error inside get_feature_error
