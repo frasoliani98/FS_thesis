@@ -1,9 +1,9 @@
-#FS_thesis7: main changes
-# KRISTIN ADDING NEW FUNCTIONS ABOUT THE ERROR COMPUTATION:
-# 1) def closest
-# 2) def check_physio_torord
-# 3) def get_torord_phys_data
-# 4) Modify computation of fitness error inside get_feature_error
+#FS_thesis5: main changes
+# Kristin code to save EADs:
+# 1) use "concat" instead of "append"
+# 2) adjustments on return 500000 condition 
+# 3) excel file EADs
+# 4) Graph EADs vs Generations
 
 import random
 from math import log10
@@ -295,14 +295,11 @@ def _evaluate_fitness(ind):
     mod, proto = get_ind_data(ind)
     proto.schedule(5.3, 0.1, 1, 1000, 0) 
     sim = myokit.Simulation(mod, proto)
-    sim.pre(1000 * 600) #pre-pace for 100 beats
+    sim.pre(1000 * 100) #pre-pace for 100 beats
     IC = sim.state()
 
-    t, v, cai, i_ion = get_normal_sim_dat(ind, IC)
-    feature_error = get_feature_errors(t, v, cai)
-    data = check_physio_torord(t, v, './', filter = 'yes')
-    morph_error = data['error']
 
+    feature_error = get_feature_errors(ind, IC=IC)
 
     # Returns 
     if feature_error == 500000:
@@ -339,7 +336,7 @@ def _evaluate_fitness(ind):
         ead_error = 100000
         print(info)
 
-    fitness = feature_error + morph_error + ead_error
+    fitness = feature_error + ead_error
 
     data = [fitness, result]
 
@@ -392,7 +389,7 @@ def _mutate(individual):
             individual[0][key] = new_param
 
 
-def get_feature_errors(t, v, cai):
+def get_feature_errors(ind, IC):
     """
     Compares the simulation data for an individual to the baseline Tor-ORd values. The returned error value is a sum of the differences between the individual and baseline values.    
     Returns
@@ -400,7 +397,7 @@ def get_feature_errors(t, v, cai):
         error
     """    
     ap_features = {}
-    #t, v, cai, i_ion = get_normal_sim_dat(ind, IC)
+    t, v, cai, i_ion = get_normal_sim_dat(ind, IC)
 
     # Returns really large error value if cell AP is not valid 
     if ((min(v) > -60) or (max(v) < 0)):
@@ -414,9 +411,8 @@ def get_feature_errors(t, v, cai):
     dvdt_max = np.max(np.diff(v[0:30])/np.diff(t[0:30]))    
     
     ap_features['Vm_peak'] = max_p
-    ap_features['dvdt_max'] = dvdt_max
-
-    '''
+    ap_features['dvdt_max'] = dvdt_max    
+    
     for apd_pct in [40, 50, 90]:
         repol_pot = max_p - apa * apd_pct/100
         idx_apd = np.argmin(np.abs(v[max_p_idx:] - repol_pot))
@@ -425,8 +421,7 @@ def get_feature_errors(t, v, cai):
         ap_features[f'apd{apd_pct}'] = apd_val
     
     ap_features['triangulation'] = ap_features['apd90'] - ap_features['apd40']
-    ap_features['RMP'] = np.mean(v[len(v)-50:len(v)])  
-    '''  
+    ap_features['RMP'] = np.mean(v[len(v)-50:len(v)])    
     
     # Calcium/CaT features######################## 
     max_cai = np.max(cai)
@@ -451,7 +446,7 @@ def get_feature_errors(t, v, cai):
         
     error = 0    
     '''
-    '''
+
     if GA_CONFIG.cost == 'function_1':
         for k, v in ap_features.items():
             error += (GA_CONFIG.feature_targets[k][1] - v)**2
@@ -459,12 +454,7 @@ def get_feature_errors(t, v, cai):
         for k, v in ap_features.items():
             if ((v < GA_CONFIG.feature_targets[k][0]) or
                     (v > GA_CONFIG.feature_targets[k][2])):
-                error += 1000
-    '''
-
-    for k, v in ap_features.items():
-        if ((v < GA_CONFIG.feature_targets[k][0]) or (v > GA_CONFIG.feature_targets[k][2])):
-            error += (GA_CONFIG.feature_targets[k][1] - v)**2   
+                error += 1000     
                 
     return error
 
@@ -598,19 +588,15 @@ def plot_generation(inds,
 
     plt.show()
 
-    tempdata = best_ind
-    df = pd.DataFrame(tempdata)
-    df.to_excel("Best_ind.xlsx", sheet_name='Sheet1', index=False)
-
 
 def start_ga(pop_size, max_generations):
     feature_targets = {'Vm_peak': [10, 33, 55],
                        'dvdt_max': [100, 347, 1000],
-                       #'apd40': [85, 198, 320],
-                       #'apd50': [110, 220, 430],
-                       #'apd90': [180, 271, 440],
-                       #'triangulation': [50, 73, 150],
-                       #'RMP': [-95, -88, -80],
+                       'apd40': [85, 198, 320],
+                       'apd50': [110, 220, 430],
+                       'apd90': [180, 271, 440],
+                       'triangulation': [50, 73, 150],
+                       'RMP': [-95, -88, -80],
                        'cat_amp': [3E-4*1e5, 3.12E-4*1e5, 8E-4*1e5],
                        'cat_peak': [40, 58, 60],
                        'cat90': [350, 467, 500]}
@@ -634,7 +620,7 @@ def start_ga(pop_size, max_generations):
                           gene_swap_probability=0.2,
                           gene_mutation_probability=0.2,
                           tournament_size=2,
-                          cost='function_1',
+                          cost='function_2',
                           feature_targets=feature_targets)
 
     creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
@@ -675,90 +661,9 @@ def start_ga(pop_size, max_generations):
     return final_population
 
 
-def closest(lst, K):
-    return lst[min(range(len(lst)), key = lambda i: abs(lst[i]-K))]
-
-
-def check_physio_torord(t, v, path = './', filter = 'no'):    
-    
-    # Cut off the upstroke of the AP for profile
-    t_ind = list(t[150:len(t)])
-    v_ind = list(v[150:len(t)])    
-    
-    # Baseline tor-ord model & cut off upstroke
-    base_df = pd.read_csv(path + 'baseline_torord_data.csv')
-    t_base = list(base_df['t'])[150:len(t)]
-    v_base = list(base_df['v'])[150:len(t)]    
-    
-    # Cut off the upstroke of the AP for the tor-ord data
-    if filter == 'no':
-        time, vol_10, vol_90 = get_torord_phys_data(path, filter)
-        t = time[150:len(time)]
-        v_10 = vol_10[150:len(time)]
-        v_90 = vol_90[150:len(time)]    
-    
-    else:
-        t, v_10, v_90 = get_torord_phys_data(path, filter)    
-        
-    result = 0 # valid AP
-    #fail_time = 3000
-    error = 0
-    check_times = []
-    data = {}    
-    
-    for i in list(range(0, len(t_ind))):
-        t_dat = closest(t, t_ind[i]) # find the value closest to the ind's time within the exp data time list
-        t_dat_base = closest(t_base, t_ind[i])
-        t_dat_i = np.where(np.array(t)==t_dat)[0][0] #find the index of the closest value in the list
-        t_dat_base_i = np.where(np.array(t_base)==t_dat_base)[0][0] #find the index of the closest value in the list
-        v_model = v_ind[i]
-        v_lowerbound = v_10[t_dat_i]
-        v_upperbound = v_90[t_dat_i]
-        v_torord = v_base[t_dat_base_i]        
-        check_times.append(np.abs(t_ind[i] - t_dat))    
-
-        if v_model < v_lowerbound or v_model > v_upperbound:
-            result = 1 # not a valid AP
-            #error += 10 - used in GA 5
-            error += (v_model - v_torord)**2    
-
-    data['result'] = result
-    data['error'] = error
-    data['check_times'] = check_times    
-
-    return(data)
-
-
-def get_torord_phys_data(path = './', filter = 'no'):
-    data = pd.read_csv(path+'torord_physiologicData.csv')
-    time = [x - 9.1666666669999994 for x in list(data['t'])] #shift action potential to match solutions
-    t = time[275:len(data['v_10'])]
-    v_10 = list(data['v_10'])[275:len(data['v_10'])]
-    v_90 = list(data['v_90'])[275:len(data['v_10'])]    
-    
-    if filter != 'no':
-        data = pd.DataFrame(data = {'t': t[1000:len(t)], 'v_10': v_10[1000:len(t)], 'v_90':v_90[1000:len(t)]})
-        data_start = pd.DataFrame(data = {'t': t[150:1000], 'v_10': v_10[150:1000], 'v_90':v_90[150:1000]})        
-        
-        # FILTER V_10
-        v_10_new = data.v_10.rolling(400, min_periods = 1, center = True).mean()
-        v_10_start = data_start.v_10.rolling(100, min_periods = 1, center = True).mean()
-        v_10_new = v_10_new.dropna()
-        v_10 = list(v_10_start) + list(v_10_new)
-        t = list(data_start['t']) + list(data['t'])        
-        
-        # FILTER V_90
-        v_90_new = data.v_90.rolling(400, min_periods = 1, center = True).mean()
-        v_90_start = data_start.v_90.rolling(200, min_periods = 1, center = True).mean()
-        v_90_new = v_90_new.dropna()
-        v_90 = list(v_90_start) + list(v_90_new)    
-        
-    return(t, v_10, v_90)
-
-
 #%%
 def main():
-    all_individuals = start_ga(pop_size=100, max_generations=20)
+    all_individuals = start_ga(pop_size=100, max_generations=50)
 
     plot_generation(all_individuals, gen=None, is_top_ten=False)
 

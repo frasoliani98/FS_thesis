@@ -10,6 +10,7 @@ def get_ind_data(ind):
 
     return mod, proto
 
+
 def get_last_ap(dat, AP):
 
     # Get t, v, and cai for second to last AP#######################
@@ -40,6 +41,7 @@ def get_last_ap(dat, AP):
 
     return (t, v)
 
+
 def run_model(ind, beats, cl = 1000, location = 0, ion = 0, value = 0, I0 = 0): 
     mod, proto = get_ind_data(ind)
     if location !=0 and ion !=0 and value !=0:
@@ -55,6 +57,7 @@ def run_model(ind, beats, cl = 1000, location = 0, ion = 0, value = 0, I0 = 0):
     dat = sim.run(beats*cl) 
     IC = sim.state()
     return(dat, IC)
+
 
 def detect_EAD(t, v):
     #find slope
@@ -131,6 +134,7 @@ def detect_EAD(t, v):
     
     return info, result
 
+
 def run_EAD(ind, IC):
 
     ## EAD CHALLENGE: Istim = -.1
@@ -156,6 +160,33 @@ def run_EAD(ind, IC):
 
     return t,v
 
+
+def run_EAD_IKr(ind, block, IC):
+
+    ## EAD CHALLENGE: Istim = -.1
+    mod, proto = get_ind_data(ind)
+    
+    mod['multipliers']['i_kr_multiplier'].set_rhs(
+        block*mod['multipliers']['i_kr_multiplier'].value())
+    mod['multipliers']['i_kb_multiplier'].set_rhs(
+        0.5*mod['multipliers']['i_kb_multiplier'].value())
+    
+    proto.schedule(5.3, 0.1, 1, 1000, 0)
+    #proto.schedule(0.3, 3004, 1000-100, 1000, 1) #EAD amp is about 4mV from this
+    
+    sim = myokit.Simulation(mod, proto)
+
+    if IC == None:
+        IC = sim.state()
+
+    dat = sim.run(50000)
+
+    # Get t, v, and cai for second to last AP#######################
+    t, v = get_last_ap(dat, -2)
+
+    return t,v
+
+
 def calc_APD(t, v, apd_pct):
     t = [i-t[0] for i in t]
     mdp = min(v)
@@ -166,6 +197,7 @@ def calc_APD(t, v, apd_pct):
     idx_apd = np.argmin(np.abs(v[max_p_idx:] - repol_pot))
     apd_val = t[idx_apd+max_p_idx]
     return(apd_val) 
+
 
 def get_normal_sim_dat(mod, proto):
     """
@@ -187,6 +219,7 @@ def get_normal_sim_dat(mod, proto):
 
     return (t, v, IC) 
 
+
 def baseline_run():
     mod, proto, x = myokit.load('./tor_ord_endo2.mmt')
     proto.schedule(5.3, 0.1, 1, 1000, 0) 
@@ -199,6 +232,23 @@ def baseline_run():
     v = np.array(dat['membrane.v'])
 
     return t, v
+
+
+def baseline_EAD(block):
+    mod, proto, x = myokit.load('./tor_ord_endo2.mmt')
+    mod['multipliers']['i_kr_multiplier'].set_rhs(
+        block*mod['multipliers']['i_kr_multiplier'].value())
+    mod['multipliers']['i_kb_multiplier'].set_rhs(
+        0.5*mod['multipliers']['i_kb_multiplier'].value())
+    proto.schedule(5.3, 0.1, 1, 1000, 0) 
+
+    sim = myokit.Simulation(mod, proto)
+    dat = sim.run(50000)
+
+    t, v = get_last_ap(dat, -2)
+
+    return t, v
+
 
 def plot_GA(ind):
     mod, proto, x = myokit.load('./tor_ord_endo2.mmt')
