@@ -60,6 +60,21 @@ ryr.RyRo                = 0
 ryr.RyRc                = 1
 ryr.RyRcp               = 1
 
+
+
+[multipliers]
+i_cal_pca_multiplier = 1
+i_kr_multiplier = 1
+i_ks_multiplier = 1
+i_nal_multiplier = 1
+i_na_multiplier = 1
+jup_multiplier = 1
+i_to_multiplier = 1
+i_k1_multiplier = 1
+i_NCX_multiplier = 1
+i_nak_multiplier = 1
+i_kb_multiplier = 1 
+
 [CaMK]
 CaMKa = CaMKb + CaMKt
     in [mM]
@@ -159,7 +174,7 @@ dot(Ok) = alpha * Ck + delta_VD * I1k - (beta + gamma_VD) * Ok - r_up * Ok + r_d
     in [1]
 dot(Okp) = alpha * Ckp + delta_VDp * I1kp - (beta + gamma_VDp) * Okp - r_up * Okp + r_down * OCakp
     in [1]
-PCa = piecewise(environment.celltype == 1, PCa_b * 0.9 * 1.4, environment.celltype == 2, PCa_b * 0.9 * 2, PCa_b * 0.9)
+PCa = piecewise(engine.celltype == 1, PCa_b * 0.9 * 1.4, engine.celltype == 2, PCa_b * 0.9 * 2, PCa_b * 0.9)
     in [1]
 PCaK = 0.0003574 * PCa
     in [1]
@@ -169,7 +184,7 @@ PCaNa = 0.00125 * PCa
     in [1]
 PCaNap = 0.00125 * PCap
     in [1]
-PCa_b = 0.0001
+PCa_b = 0.0001 * multipliers.i_cal_pca_multiplier
     in [1]
 PCap = 1.1 * PCa
     in [1]
@@ -329,9 +344,9 @@ undo_ICab = 0
 [IK1]
 EKshift = 8 [mV]
     in [mV]
-GK1 = piecewise(environment.celltype == 1, bGK1 * GK1_b * 1.2, environment.celltype == 2, bGK1 * GK1_b * 1.3, bGK1 * GK1_b)
+GK1 = piecewise(engine.celltype == 1, bGK1 * GK1_b * 1.2, engine.celltype == 2, bGK1 * GK1_b * 1.3, bGK1 * GK1_b)
     in [mS/uF]
-GK1_b = 0.1908 [mS/uF]
+GK1_b = 0.1908 * multipliers.i_k1_multiplier
     in [mS/uF]
 IK1 = GK1 * sqrt(extracellular.ko) * rk1 * xk1 * (membrane.v - reversal_potentials.EK)
     in [A/F]
@@ -349,9 +364,9 @@ xk1ss = 1 / (1 + exp(-(membrane.v + 2.5538 [g*m^5/s^3/A/mol] * extracellular.ko 
     in [1]
 
 [IKb]
-GKb = piecewise(environment.celltype == 1, GKb_b * 0.6, GKb_b)
+GKb = piecewise(engine.celltype == 1, GKb_b * 0.6, GKb_b)
     in [mS/uF]
-GKb_b = 0.003 [mS/uF]
+GKb_b = 0.003 * multipliers.i_kb_multiplier
     in [mS/uF]
 IKb = GKb * xkb * (membrane.v - reversal_potentials.EK)
     in [A/F]
@@ -423,9 +438,9 @@ dot(Cbound) = -(Kt / (1 + exp(-(membrane.v - Vhalf) / 6.789 [mV])) * Cbound - Kt
     in [1]
 dot(D) = 0
     in [1]
-GKr = piecewise(environment.celltype == 1, GKr_b * bGKr * 1.1, environment.celltype == 2, GKr_b * bGKr * 0.8, GKr_b * bGKr)
+GKr = piecewise(engine.celltype == 1, GKr_b * bGKr * 1.1, engine.celltype == 2, GKr_b * bGKr * 0.8, GKr_b * bGKr)
     in [mS/uF]
-GKr_b = 0.046 [mS/uF]
+GKr_b = 0.046 * multipliers.i_kr_multiplier
     in [mS/uF]
 GKr_total = GKr * sqrt(extracellular.ko / 5.4 [mM])
     in [mS/uF]
@@ -491,9 +506,9 @@ q63 = 5.682
 [IKs]
 EKshift = 8 [mV]
     in [mV]
-GKs = piecewise(environment.celltype == 1, bGKs * GKs_b * 1.4, bGKs * GKs_b)
+GKs = piecewise(engine.celltype == 1, bGKs * GKs_b * 1.4, bGKs * GKs_b)
     in [mS/uF]
-GKs_b = 0.0034 [mS/uF]
+GKs_b = 0.0034 * multipliers.i_ks_multiplier
     in [mS/uF]
 IKs = GKs * KsCa * xs1 * xs2 * (membrane.v - reversal_potentials.EKs)
     in [A/F]
@@ -521,7 +536,7 @@ Ahf = 0.99
     in [1]
 Ahs = 1 - Ahf
     in [1]
-GNa = 75 [mS/uF]
+GNa = 75 * multipliers.i_na_multiplier
     in [mS/uF]
 INa = GNa * bGNa * (membrane.v - reversal_potentials.ENa) * m^3 * ((1 - fINap) * h * j + fINap * hp * jp)
     in [A/F]
@@ -605,9 +620,9 @@ E4_i = x4_i / (x1_i + x2_i + x3_i + x4_i)
     in [1]
 E4_ss = x4_ss / (x1_ss + x2_ss + x3_ss + x4_ss)
     in [1]
-Gncx = piecewise(environment.celltype == 1, bGncx * Gncx_b * 1.2, environment.celltype == 2, bGncx * Gncx_b * 1.4, bGncx * Gncx_b)
+Gncx = piecewise(engine.celltype == 1, bGncx * Gncx_b * 1.2, engine.celltype == 2, bGncx * Gncx_b * 1.4, bGncx * Gncx_b)
     in [mS/uF]
-Gncx_b = 0.0008 [mS/uF]
+Gncx_b = 0.0008 * multipliers.i_NCX_multiplier
     in [mS/uF]
 INaCa_i = 0.8 * Gncx * allo_i * (physical_constants.zna * JncxNa_i + physical_constants.zca * JncxCa_i)
     in [A/F]
@@ -811,9 +826,9 @@ MgATP = 9.8 [mM]
     in [mM]
 P = eP / (1 + H / Khp + intracellular_ions.nai / Knap + intracellular_ions.ki / Kxkur)
     in [1]
-Pnak = piecewise(environment.celltype == 1, bGnak * Pnak_b * 0.9, environment.celltype == 2, bGnak * Pnak_b * 0.7, bGnak * Pnak_b)
+Pnak = piecewise(engine.celltype == 1, bGnak * Pnak_b * 0.9, engine.celltype == 2, bGnak * Pnak_b * 0.7, bGnak * Pnak_b)
     in [mS/uF]
-Pnak_b = 30 [mS/uF]
+Pnak_b = 30 * multipliers.i_nak_multiplier
     in [mS/uF]
 a1 = k1p * (intracellular_ions.nai / Knai)^3 / ((1 + intracellular_ions.nai / Knai)^3 + (1 + intracellular_ions.ki / Kki)^2 - 1)
     in [1]
@@ -863,9 +878,9 @@ x4 = b4 * b3 * b2 + a3 * a4 * a1 + b2 * a4 * a1 + b3 * b2 * a1
     in [1]
 
 [INaL]
-GNaL = piecewise(environment.celltype == 1, GNaL_b * bGnal * 0.7, GNaL_b * bGnal)
+GNaL = piecewise(engine.celltype == 1, GNaL_b * bGnal * 0.7, GNaL_b * bGnal)
     in [mS/uF]
-GNaL_b = 0.0075 [mS/uF]
+GNaL_b = 0.0075 * multipliers.i_nal_multiplier
     in [mS/uF]
 INaL = GNaL * (membrane.v - reversal_potentials.ENa) * mL * ((1 - fINaLp) * hL + fINaLp * hLp)
     in [A/F]
@@ -915,9 +930,9 @@ AiS = 1 - AiF
     in [1]
 EKshift = 8 [mV]
     in [mV]
-Gto = piecewise(environment.celltype == 1, bGto * Gto_b * 4, environment.celltype == 2, bGto * Gto_b * 4, Gto_b * bGto)
+Gto = piecewise(engine.celltype == 1, bGto * Gto_b * 4, engine.celltype == 2, bGto * Gto_b * 4, Gto_b * bGto)
     in [mS/uF]
-Gto_b = 0.02 [mS/uF]
+Gto_b = 0.02 * multipliers.i_to_multiplier
     in [mS/uF]
 Ito = Gto * (membrane.v - reversal_potentials.EK) * ((1 - fItop) * a * i + fItop * ap * ip)
     in [A/F]
@@ -931,7 +946,7 @@ assp = 1 / (1 + exp(-(membrane.v + EKshift - 24.34 [mV]) / 14.82 [mV]))
     in [1]
 bGto = 1
     in [1]
-delta_epi = piecewise(environment.celltype == 1, 1 - 0.95 / (1 + exp((membrane.v + EKshift + 70 [mV]) / 5 [mV])), 1)
+delta_epi = piecewise(engine.celltype == 1, 1 - 0.95 / (1 + exp((membrane.v + EKshift + 70 [mV]) / 5 [mV])), 1)
     in [1]
 dti_develop = 1.354 + 0.0001 / (exp((membrane.v + EKshift - 167.4 [mV]) / 15.89 [mV]) + exp(-(membrane.v + EKshift - 12.23 [mV]) / 0.2154 [mV]))
     in [1]
@@ -969,7 +984,7 @@ tiSp = dti_develop * dti_recover * tiS
     in [ms]
 
 [SERCA]
-Jleak = 0.0123 [mM/ms] * intracellular_ions.casr / 15 [mM]
+Jleak = multipliers.jup_multiplier * 0.0123 [mM/ms] * intracellular_ions.casr / 15 [mM]
     in [mM/ms]
 Jup = cJup * ((1 - fJupp) * Jupnp + fJupp * Jupp)
     in [mM/ms]
@@ -977,9 +992,9 @@ Jup2 = Vmax_SRCaP * ((intracellular_ions.cai / Kmf)^hillSRCaP - (intracellular_i
     in [mM/ms]
 Jup_b = 1
     in [1]
-Jupnp = upScale * 0.004375 * intracellular_ions.cai / (intracellular_ions.cai + 0.00092 [mM])
+Jupnp = multipliers.jup_multiplier * upScale * 0.004375 * intracellular_ions.cai / (intracellular_ions.cai + 0.00092 [mM])
     in [mM/ms]
-Jupp = upScale * 2.75 * 0.004375 * intracellular_ions.cai / (intracellular_ions.cai + 0.00092 [mM] - 0.00017 [mM])
+Jupp = multipliers.jup_multiplier * upScale * 2.75 * 0.004375 * intracellular_ions.cai / (intracellular_ions.cai + 0.00092 [mM] - 0.00017 [mM])
     in [mM/ms]
 Kmf = 0.000246 [mM]
     in [mM]
@@ -993,7 +1008,7 @@ fJupp = 1 / (1 + CaMK.KmCaMK / CaMK.CaMKa)
     in [1]
 hillSRCaP = 1.787 [mM]
     in [mM]
-upScale = piecewise(environment.celltype == 1, 1.3, 1)
+upScale = piecewise(engine.celltype == 1, 1.3, 1)
     in [1]
 
 [cell_geometry]
@@ -1026,17 +1041,29 @@ JdiffK = (intracellular_ions.kss - intracellular_ions.ki) / 2
 JdiffNa = (intracellular_ions.nass - intracellular_ions.nai) / 2
     in [mM/ms]
 
-[environment]
+[engine]
 celltype = 0
     in [1]
+pace = 0
+    bind pace
 time = 0 [ms] bind time
     in [ms]
 
+[stimulus]
+i_stim = engine.pace * amplitude
+    in [A/F]
+amplitude = -10 [A/F]
+    in [A/F]
+
 [extracellular]
-cao = 2.7 [mM]
+cao = 1.8 [mM]
     in [mM]
-ko = 5.4 [mM]
+#cao = 2.7 [mM]
+#    in [mM]
+ko = 4 [mM]
     in [mM]
+#ko = 5.4 [mM]
+#    in [mM]
 nao = 144 [mM]
     in [mM]
 
@@ -1067,13 +1094,13 @@ dot(cass) = Bcass * (-(ICaL.ICaL - 2 * INaCa_i.INaCa_ss) * cell_geometry.Acap / 
     in [mM]
 cm = 1 [uF/cm^2]
     in [uF/cm^2]
-cmdnmax = piecewise(environment.celltype == 1, cmdnmax_b * 1.2, cmdnmax_b)
+cmdnmax = piecewise(engine.celltype == 1, cmdnmax_b * 1.2, cmdnmax_b)
     in [mM]
 cmdnmax_b = 0.05 [mM]
     in [mM]
 csqnmax = 1 [mM]
     in [mM]
-dot(ki) = -(Ito.Ito + IKr.IKr + IKs.IKs + IK1.IK1 + IKb.IKb + membrane.Istim - 2 * INaK.INaK) * cm * cell_geometry.Acap / (physical_constants.F * cell_geometry.vmyo) + diff.JdiffK * cell_geometry.vss / cell_geometry.vmyo
+dot(ki) = -(Ito.Ito + IKr.IKr + IKs.IKs + IK1.IK1 + IKb.IKb + stimulus.i_stim - 2 * INaK.INaK) * cm * cell_geometry.Acap / (physical_constants.F * cell_geometry.vmyo) + diff.JdiffK * cell_geometry.vss / cell_geometry.vmyo
     in [mM]
 kmcmdn = 0.00238 [mM]
     in [mM]
@@ -1090,22 +1117,24 @@ dot(nass) = -(ICaL.ICaNa + 3 * INaCa_i.INaCa_ss) * cm * cell_geometry.Acap / (ph
 trpnmax = 0.07 [mM]
     in [mM]
 
+
+
 [membrane]
-Istim = piecewise(environment.time >= i_Stim_Start and environment.time <= i_Stim_End and environment.time - i_Stim_Start - floor((environment.time - i_Stim_Start) / i_Stim_Period) * i_Stim_Period <= i_Stim_PulseDuration, i_Stim_Amplitude, 0 [A/F])
-    in [A/F]
-i_Stim_Amplitude = -53 [A/F]
-    in [A/F]
-i_Stim_End = 999000 [ms]
-    in [ms]
-i_Stim_Period = 1000 [ms]
-    in [ms]
-i_Stim_PulseDuration = 1 [ms]
-    in [ms]
-i_Stim_Start = 0 [ms]
-    in [ms]
+#Istim = piecewise(engine.time >= i_Stim_Start and engine.time <= i_Stim_End and engine.time - i_Stim_Start - floor((engine.time - i_Stim_Start) / i_Stim_Period) * i_Stim_Period <= i_Stim_PulseDuration, i_Stim_Amplitude, 0 [A/F])
+#    in [A/F]
+#i_Stim_Amplitude = -53 [A/F]
+#    in [A/F]
+#i_Stim_End = 999000 [ms]
+#    in [ms]
+#i_Stim_Period = 1000 [ms]
+#    in [ms]
+#i_Stim_PulseDuration = 1 [ms]
+#    in [ms]
+#i_Stim_Start = 0 [ms]
+#    in [ms]
 pstim = 3
     in [1]
-dot(v) = -(INa.INa + INaL.INaL + Ito.Ito + ICaL.ICaL + ICaL.ICaNa + ICaL.ICaK + IKr.IKr + IKs.IKs + IK1.IK1 + INaCa_i.INaCa_i + INaCa_i.INaCa_ss + INaK.INaK + INab.INab + IKb.IKb + IpCa.IpCa + ICab.ICab + Istim)
+dot(v) = -(INa.INa + INaL.INaL + Ito.Ito + ICaL.ICaL + ICaL.ICaNa + ICaL.ICaK + IKr.IKr + IKs.IKs + IK1.IK1 + INaCa_i.INaCa_i + INaCa_i.INaCa_ss + INaK.INaK + INab.INab + IKb.IKb + IpCa.IpCa + ICab.ICab + stimulus.i_stim)
     in [mV]
 vffrt = v * physical_constants.F * physical_constants.F / (physical_constants.R * physical_constants.T)
     in [C/mol]
@@ -1141,9 +1170,9 @@ PKNa = 0.01833
 [ryr]
 Jrel = (1 - fJrelp) * Jrelnp + fJrelp * Jrelp
     in [mM/ms]
-Jrelnp = piecewise(environment.celltype == 2, g_irel_max_M * RyRSRCass * RyRo * RyRc * (intracellular_ions.casr - intracellular_ions.cass), g_irel_max * RyRSRCass * RyRo * RyRc * (intracellular_ions.casr - intracellular_ions.cass))
+Jrelnp = piecewise(engine.celltype == 2, g_irel_max_M * RyRSRCass * RyRo * RyRc * (intracellular_ions.casr - intracellular_ions.cass), g_irel_max * RyRSRCass * RyRo * RyRc * (intracellular_ions.casr - intracellular_ions.cass))
     in [mM/ms]
-Jrelp = piecewise(environment.celltype == 2, g_irel_max_p * 1.7 * RyRSRCass * RyRo * RyRcp * (intracellular_ions.casr - intracellular_ions.cass), g_irel_max_p * RyRSRCass * RyRo * RyRcp * (intracellular_ions.casr - intracellular_ions.cass))
+Jrelp = piecewise(engine.celltype == 2, g_irel_max_p * 1.7 * RyRSRCass * RyRo * RyRcp * (intracellular_ions.casr - intracellular_ions.cass), g_irel_max_p * RyRSRCass * RyRo * RyRcp * (intracellular_ions.casr - intracellular_ions.cass))
     in [mM/ms]
 RyRSRCass = 1 - 1 / (1 + exp((intracellular_ions.casr - 0.3 [mM]) / 0.1 [mM]))
     in [1]
@@ -1190,3 +1219,6 @@ g_irel_max_p = g_irel_max * 1.25
 Jtr = 0 [mM/ms]
     in [mM/ms]
 
+[[protocol]]
+#Level  Start    Length   Period   Multiplier
+#4.0      10       1        1000      0
