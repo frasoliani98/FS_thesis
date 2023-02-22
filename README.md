@@ -73,3 +73,18 @@ KRISTIN ADDING NEW FUNCTIONS ABOUT THE ERROR COMPUTATION:
 2) def check_physio_torord
 3) def get_torord_phys_data
 4) Modify computation of fitness error inside get_feature_error
+
+# "FS_thesis8": final code used for the GA
+1) pop_models: study with the population of models
+2) TRIALS_100_20_FS8: solutions of the trials obtained from the GA, all teh best individuals
+3) RESULTS_PPT: final plots obtained 
+
+# BPS MODEL
+1) FS_thesis_BPS: samo feature values used in tor-ord (calcium features + Vm + dvdt)
+2) FS_thesis_BPS_features: i changed the features used -> i didnt use the calcium features, instead i used Vm + dvdt + apd40-50-90 + rmp
+3) test_BPS: VERY IMP! a lot of codes in order to verify and test the results obtained
+4) General_results: some figures to get some study results
+5) OTHERS: other trials (minor)
+6) PLOTS_1461: final plots used in the thesis
+7) troubleshooting results bps: to understan what were the problems
+8) FINAL_RESULTS_OK_1461: final trials obtained from the GA with the BPS_features
