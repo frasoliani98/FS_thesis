@@ -1,8 +1,6 @@
-#FS_thesis BPS: main changes
-# CHANGES:
-# 1) New get_last_ap function in important function
-# 2) Different settings in order to induce EADs in the RUN_EADs function
-
+#FS_BPS3: main changes
+# 1) mix of the 2 models: inducing eads by run_eads function by setting parameters
+# 2) change prepacing to 50*4000 in the run eads
 
 import random
 from math import log10
@@ -12,7 +10,7 @@ import seaborn as sns # pip install seaborn
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
-from important_functions_BPS import run_EAD, detect_EAD
+from important_functions_BPS3 import run_EAD, detect_EAD
 
 from deap import base, creator, tools # pip install deap
 import myokit
@@ -51,7 +49,7 @@ def get_ind_data(ind):
     #dir_path = os.path.dirname(os.path.realpath(__file__))
     #mod, proto, x = myokit.load(r'C:\Users\user\Desktop\Thesis\GeneticAlgorithms\tor-ord-GA\tor_ord_endo.mmt')
 
-    mod, proto, x = myokit.load('./BPS_f.mmt')
+    mod, proto, x = myokit.load('./BPS3.mmt')
     if ind is not None:
         for k, v in ind[0].items():
             mod['multipliers'][k].set_rhs(v)
@@ -253,7 +251,7 @@ def run_ga(toolbox):
     ax.plot(gen, best_err, 'bo', label= 'Best Error')
     ax.set_xlabel('Generations',fontsize=14)
     ax.set_ylabel('Errors', fontsize=14)
-    fig.suptitle('AVG and BEST Err BPS-model ', fontsize=14)
+    fig.suptitle('AVG and BEST Err BPS model ', fontsize=14)
 
     ax.legend()
     plt.show()
@@ -292,11 +290,11 @@ def _evaluate_fitness(ind):
         fitness : number 
     """
     mod, proto = get_ind_data(ind)
-    proto.schedule(5.3, 0.1, 1, 4000, 0) 
+    proto.schedule(5.3, 0.1, 1, 1000, 0) 
     sim = myokit.Simulation(mod, proto)
-    
+
     try:
-        sim.pre(600 * 4000) 
+        sim.pre(600 * 1000) 
     except:
         data = [500000, 1]
         return data
@@ -315,7 +313,7 @@ def _evaluate_fitness(ind):
         return data
 
     
-    t,v,t1,v1 = run_EAD(ind, IC=IC)
+    t,v,t1,v1 = run_EAD(ind)
     info, result = detect_EAD(t,v)
     info1, result1 = detect_EAD(t1,v1)
 
@@ -342,7 +340,8 @@ def _evaluate_fitness(ind):
     '''
 
     if result == 1 or result1 == 1:
-        ead_error = 100000
+        #ead_error = 100000
+        ead_error = 1000
         #print('info' +str(info))
         #print('info1' +str(info1))
 
@@ -351,8 +350,6 @@ def _evaluate_fitness(ind):
     data = [fitness, result]
 
     return data
-
-    #return fitness 
 
 
 def _mate(i_one, i_two):
@@ -401,7 +398,7 @@ def _mutate(individual):
 
 def get_feature_errors(t, v, cai):
     """
-    Compares the simulation data for an individual to the baseline BPS values. The returned error value is a sum of the differences between the individual and baseline values.    
+    Compares the simulation data for an individual to the baseline Tor-ORd values. The returned error value is a sum of the differences between the individual and baseline values.    
     Returns
     ------
         error
@@ -418,7 +415,7 @@ def get_feature_errors(t, v, cai):
     max_p = max(v)
     max_p_idx = np.argmax(v)
     apa = max_p - mdp
-    dvdt_max = np.max(np.diff(v[0:30])/np.diff(t[0:30]))    
+    dvdt_max = np.max(np.diff(v[0:100])/np.diff(t[0:100]))    
     
     ap_features['Vm_peak'] = max_p
     ap_features['dvdt_max'] = dvdt_max
@@ -452,12 +449,7 @@ def get_feature_errors(t, v, cai):
     
     error = 0    
     
-    '''
-    for k, v in ap_features.items():
-        error += (GA_CONFIG.feature_targets[k][1] - v)**2    
-        
-    error = 0    
-    '''
+
     '''
     if GA_CONFIG.cost == 'function_1':
         for k, v in ap_features.items():
@@ -467,12 +459,12 @@ def get_feature_errors(t, v, cai):
             if ((v < GA_CONFIG.feature_targets[k][0]) or
                     (v > GA_CONFIG.feature_targets[k][2])):
                 error += 1000
+    
     '''
-
     for k, v in ap_features.items():
         if ((v < GA_CONFIG.feature_targets[k][0]) or (v > GA_CONFIG.feature_targets[k][2])):
-            error += (GA_CONFIG.feature_targets[k][1] - v)**2   
-                
+            error += (GA_CONFIG.feature_targets[k][1] - v)**2 
+
     return error
 
 
@@ -487,14 +479,14 @@ def get_normal_sim_dat(ind, IC):
     """
 
     mod, proto = get_ind_data(ind)
-    proto.schedule(5.3, 0.1, 1, 4000, 0) 
+    proto.schedule(5.3, 0.1, 1, 1000, 0) 
     sim = myokit.Simulation(mod, proto)
     
     if IC == None:
         IC = sim.state()
 
     sim.set_state(IC)
-    dat = sim.run(20000)
+    dat = sim.run(50000)
 
     # Get t, v, and cai for second to last AP#######################
     i_stim = dat['stimulus.i_stim']
@@ -513,21 +505,6 @@ def get_normal_sim_dat(ind, IC):
     i_ion = np.array(dat['membrane.i_ion'][start_ap:end_ap])
 
     return (t, v, cai, i_ion)
-
-
-'''
-def get_ead_error(ind):
-    mod, proto, x = myokit.load('./tor_ord_endo.mmt')
-    for k, v in ind[0].items():
-        mod['multipliers'][k].set_rhs(v)
-
-    sim = myokit.Simulation(mod, proto)
-    dat = sim.run(50000)
-
-    mod['multipliers']['i_cal_pca_multiplier'].set_rhs(8)
-    sim = myokit.Simulation(mod, proto)
-    dat = sim.run(50000)
-'''
 
 
 def plot_generation(inds,
@@ -627,7 +604,7 @@ def start_ga(pop_size, max_generations):
     GA_CONFIG = Ga_Config(population_size=pop_size,
                           max_generations=max_generations,
                           params_lower_bound=0.1,
-                          params_upper_bound=3.1,
+                          params_upper_bound=10,
                           tunable_parameters=['i_cal_pca_multiplier',
                                               'i_kr_multiplier'],
                           
@@ -641,7 +618,7 @@ def start_ga(pop_size, max_generations):
                           gene_swap_probability=0.2,
                           gene_mutation_probability=0.2,
                           tournament_size=2,
-                          cost='function_1',
+                          cost='function_2',
                           feature_targets=feature_targets)
 
     creator.create('FitnessMin', base.Fitness, weights=(-1.0,))
@@ -765,7 +742,7 @@ def get_torord_phys_data(path = './', filter = 'no'):
 
 #%%
 def main():
-    all_individuals = start_ga(pop_size=100, max_generations=5)
+    all_individuals = start_ga(pop_size=100, max_generations=20)
 
     plot_generation(all_individuals, gen=None, is_top_ten=False)
 

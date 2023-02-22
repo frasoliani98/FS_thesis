@@ -1,7 +1,4 @@
-#FS_thesis BPS: main changes
-# CHANGES:
-# 1) New get_last_ap function in important function
-# 2) Different settings in order to induce EADs in the RUN_EADs function
+#FS_thesisBPS2
 
 
 import random
@@ -45,13 +42,22 @@ class Ga_Config():
         self.cost = cost
         self.feature_targets = feature_targets
 
+def get_bps(ind):
+    mod, proto, x = myokit.load('./BPS_f.mmt')
+    #mod, proto, x = myokit.load('./BPS_f.mmt')
+    if ind is not None:
+        for k, v in ind[0].items():
+            mod['multipliers'][k].set_rhs(v)
+
+    return mod, proto
 
 def get_ind_data(ind):
     #import os 
     #dir_path = os.path.dirname(os.path.realpath(__file__))
     #mod, proto, x = myokit.load(r'C:\Users\user\Desktop\Thesis\GeneticAlgorithms\tor-ord-GA\tor_ord_endo.mmt')
 
-    mod, proto, x = myokit.load('./BPS_f.mmt')
+    mod, proto, x = myokit.load('./BPS.mmt')
+    #mod, proto, x = myokit.load('./BPS_f.mmt')
     if ind is not None:
         for k, v in ind[0].items():
             mod['multipliers'][k].set_rhs(v)
@@ -253,7 +259,7 @@ def run_ga(toolbox):
     ax.plot(gen, best_err, 'bo', label= 'Best Error')
     ax.set_xlabel('Generations',fontsize=14)
     ax.set_ylabel('Errors', fontsize=14)
-    fig.suptitle('AVG and BEST Err BPS-model ', fontsize=14)
+    fig.suptitle('AVG and BEST Err Tor-Ord-Endo2-model ', fontsize=14)
 
     ax.legend()
     plt.show()
@@ -294,7 +300,7 @@ def _evaluate_fitness(ind):
     mod, proto = get_ind_data(ind)
     proto.schedule(5.3, 0.1, 1, 4000, 0) 
     sim = myokit.Simulation(mod, proto)
-    
+
     try:
         sim.pre(600 * 4000) 
     except:
@@ -315,7 +321,7 @@ def _evaluate_fitness(ind):
         return data
 
     
-    t,v,t1,v1 = run_EAD(ind, IC=IC)
+    t,v,t1,v1 = run_EAD(ind)
     info, result = detect_EAD(t,v)
     info1, result1 = detect_EAD(t1,v1)
 
@@ -401,7 +407,7 @@ def _mutate(individual):
 
 def get_feature_errors(t, v, cai):
     """
-    Compares the simulation data for an individual to the baseline BPS values. The returned error value is a sum of the differences between the individual and baseline values.    
+    Compares the simulation data for an individual to the baseline Tor-ORd values. The returned error value is a sum of the differences between the individual and baseline values.    
     Returns
     ------
         error
@@ -494,7 +500,7 @@ def get_normal_sim_dat(ind, IC):
         IC = sim.state()
 
     sim.set_state(IC)
-    dat = sim.run(20000)
+    dat = sim.run(50000)
 
     # Get t, v, and cai for second to last AP#######################
     i_stim = dat['stimulus.i_stim']
@@ -513,21 +519,6 @@ def get_normal_sim_dat(ind, IC):
     i_ion = np.array(dat['membrane.i_ion'][start_ap:end_ap])
 
     return (t, v, cai, i_ion)
-
-
-'''
-def get_ead_error(ind):
-    mod, proto, x = myokit.load('./tor_ord_endo.mmt')
-    for k, v in ind[0].items():
-        mod['multipliers'][k].set_rhs(v)
-
-    sim = myokit.Simulation(mod, proto)
-    dat = sim.run(50000)
-
-    mod['multipliers']['i_cal_pca_multiplier'].set_rhs(8)
-    sim = myokit.Simulation(mod, proto)
-    dat = sim.run(50000)
-'''
 
 
 def plot_generation(inds,
@@ -590,8 +581,11 @@ def plot_generation(inds,
                     log10(upper_bound))
     axs[0].set_ylabel('Log10 Conductance', fontsize=14)
 
+    t, v = get_bps(best_ind)
+    axs[1].plot(t, v, 'b--', label='Best Fit BPS eads')
+
     t, v, cai, i_ion = get_normal_sim_dat(best_ind, IC=None)
-    axs[1].plot(t, v, 'b--', label='Best Fit')
+    axs[1].plot(t, v, 'g--', label='Best fit BPS normal')
 
     t, v, cai, i_ion = get_normal_sim_dat(None, IC=None)
     axs[1].plot(t, v, 'k', label='Original BPS')
@@ -627,7 +621,7 @@ def start_ga(pop_size, max_generations):
     GA_CONFIG = Ga_Config(population_size=pop_size,
                           max_generations=max_generations,
                           params_lower_bound=0.1,
-                          params_upper_bound=3.1,
+                          params_upper_bound=10,
                           tunable_parameters=['i_cal_pca_multiplier',
                                               'i_kr_multiplier'],
                           
@@ -693,7 +687,7 @@ def check_physio_torord(t, v, path = './', filter = 'no'):
     v_ind = list(v[150:len(t)])    
     
     # Baseline tor-ord model & cut off upstroke
-    base_df = pd.read_csv(path + 'baseline_torord_data.csv')
+    base_df = pd.read_csv(path + 'baseline_bps_data.csv')
     t_base = list(base_df['t'])[150:len(t)]
     v_base = list(base_df['v'])[150:len(t)]    
     
@@ -765,7 +759,7 @@ def get_torord_phys_data(path = './', filter = 'no'):
 
 #%%
 def main():
-    all_individuals = start_ga(pop_size=100, max_generations=5)
+    all_individuals = start_ga(pop_size=100, max_generations=20)
 
     plot_generation(all_individuals, gen=None, is_top_ten=False)
 
